@@ -5,6 +5,7 @@ import edu.wisc.cs.sdn.vnet.DumpFile;
 import edu.wisc.cs.sdn.vnet.Iface;
 
 import net.floodlightcontroller.packet.Ethernet;
+import net.floodlightcontroller.packet.IPv4;
 
 /**
  * @author Aaron Gember-Jacobson and Anubhavnidhi Abhashkumar
@@ -83,9 +84,62 @@ public class Router extends Device
 				etherPacket.toString().replace("\n", "\n\t"));
 		
 		/********************************************************************/
-		/* TODO: Handle packets                                             */
+		//packet handline
+		IPv4 payload = null;
 		
+		//Check if is IPv4 packet.If not, drop it
+		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4
+				&& etherPacket.getPayload() instanceof IPv4
+				&& payload != null){
+			return;
+		}
+		payload = (IPv4)etherPacket.getPayload();
 		
+		//verify the checksum. If not correct, drop it
+		//get the given checksum
+		short givenChecksum = payload.getChecksum();
+		
+		//recompute the checksum
+		payload.resetChecksum();
+		payload.serialize();
+		short newChecksum = payload.getChecksum();
+		
+		if(givenChecksum != newChecksum){
+			return;
+		}
+		
+		//decrease the TTL by 1. If result is 0, drop it
+		byte ttl = 0;
+		if((ttl = payload.getTtl()) <= (byte)1)
+			return;
+		ttl--;
+		payload.setTtl(ttl);
+		
+		//check if the packet is desinated to the router by compare the destination
+		//IP of the packet and the IPs of the router's interfaces
+		int destinationIp = payload.getDestinationAddress();	
+		for(Iface iface: this.interfaces.values()){
+			int currIp = iface.getIpAddress();
+			if(currIp == destinationIp)
+				return;
+		}
+		
+		//Packet forwarding
+		RouteEntry routeEntry = routeTable.lookup(destinationIp);	
+		if (routeEntry == null)
+			return;
+		
+		//find the forwarding interface
+		ArpEntry arpEntry = arpCache.lookup(destinationIp);
+		String destinationMAC = arpEntry.getMac().toString();
+		//set the MAC addresses for the frame
+		etherPacket.setSourceMACAddress(etherPacket.getDestinationMAC().toString());
+		etherPacket.setDestinationMACAddress(destinationMAC);	
+		//re-serialize the frame
+		payload.resetChecksum();	
+		payload.serialize();
+		etherPacket.setPayload(payload);
+		this.sendPacket(etherPacket, routeEntry.getInterface());
 		/********************************************************************/
 	}
 }
