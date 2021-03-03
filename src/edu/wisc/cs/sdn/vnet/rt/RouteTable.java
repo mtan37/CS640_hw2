@@ -1,5 +1,6 @@
 package edu.wisc.cs.sdn.vnet.rt;
 
+import java.lang.Math;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -38,9 +39,25 @@ public class RouteTable
 		synchronized(this.entries)
 		{
 			/*****************************************************************/
-			/* TODO: Find the route entry with the longest prefix match	  */
-			
-			return null;
+			char[] sIp = IPv4.fromIPv4Address(ip).toCharArray();
+			int matchDigits = 0;
+			RouteEntry matchedIp = null;
+			for (RouteEntry entry: this.entries){
+				char[] currIp = IPv4.fromIPv4Address(
+						entry.getDestinationAddress()).toCharArray();
+				
+				//compare the characters between the ip until get to a no match
+				for(int i = 0; i < Math.min(sIp.length, currIp.length); i++){
+					if(sIp[i] != currIp[i]){
+						if(i > matchDigits){
+							matchDigits = i;
+							matchedIp = entry;	
+						}
+						break;
+					}
+				}
+			}		
+			return matchedIp;
 			
 			/*****************************************************************/
 		}
