@@ -1,15 +1,96 @@
 package edu.wisc.cs.sdn.vnet.sw;
 
 import net.floodlightcontroller.packet.Ethernet;
+import net.floodlightcontroller.packet.MACAddress;
 import edu.wisc.cs.sdn.vnet.Device;
 import edu.wisc.cs.sdn.vnet.DumpFile;
 import edu.wisc.cs.sdn.vnet.Iface;
+
+import java.util.ArrayList;
+import java.util.Hashtable;
+
+class MacAddressTable extends Thread {
+	private Hashtable<MACAddress, Iface> MACLookupTable;
+	private ArrayList<MACAddressTime> MACTimes;
+	
+	public void run() {
+		MACLookupTable = new Hashtable<MACAddress, Iface>();
+		MACTimes = new ArrayList<MACAddressTime>();
+		while(true) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				e.printStackTrace();
+				break;
+			}
+			cleanUp();
+		}
+	}
+	
+	public synchronized Iface getIface(MACAddress mac) {
+		for(int i = 0; i<MACTimes.size(); i++) {
+			if(MACTimes.get(i).getMAC() == mac) {
+				MACTimes.get(i).updateTimeout();
+				break;
+			}
+		}
+		return MACLookupTable.get(mac);
+	}
+	
+	public synchronized boolean exists(MACAddress mac) {
+		if(MACLookupTable.get(mac) == null) {
+			return false;
+		} else {
+			return true;
+		}
+	}
+	
+	public synchronized void addMAC(MACAddress mac, Iface iface) {
+		MACLookupTable.put(mac, iface);
+		MACAddressTime addrTime = new MACAddressTime(mac);
+		MACTimes.add(addrTime);
+	}
+	
+	public synchronized void cleanUp() {
+		long currTime = System.currentTimeMillis();
+		for(int i = 0; i<MACTimes.size(); i++) {
+			if (MACTimes.get(i).getTimeout() <= currTime) {
+				MACLookupTable.remove(MACTimes.get(i).getMAC());
+				MACTimes.remove(i);
+				i--;
+			}
+		}
+	}
+}
+
+class MACAddressTime {
+	private long timeout;
+	private MACAddress mac;
+	public MACAddressTime(MACAddress mac) {
+		this.mac = mac;
+		updateTimeout();
+	}
+	
+	public long getTimeout() {
+		return timeout;
+	}
+	
+	public MACAddress getMAC() {
+		return mac;
+	}
+	
+	public void updateTimeout() {
+		timeout = System.currentTimeMillis() + 15000;
+	}
+}
 
 /**
  * @author Aaron Gember-Jacobson
  */
 public class Switch extends Device
 {	
+	private MacAddressTable MACTable;
 	/**
 	 * Creates a router for a specific host.
 	 * @param host hostname for the router
@@ -17,6 +98,8 @@ public class Switch extends Device
 	public Switch(String host, DumpFile logfile)
 	{
 		super(host,logfile);
+		MACTable = new MacAddressTable();
+		MACTable.run();
 	}
 
 	/**
@@ -30,8 +113,26 @@ public class Switch extends Device
 				etherPacket.toString().replace("\n", "\n\t"));
 		
 		/********************************************************************/
-		/* TODO: Handle packets                                             */
+		
+		MACAddress source = etherPacket.getSourceMAC();
+		if(!MACTable.exists(source)) {
+			MACTable.addMAC(source, inIface);
+		}
+		
+		MACAddress destination = etherPacket.getDestinationMAC();
+		if(MACTable.exists(destination)){
+			sendPacket(etherPacket, MACTable.getIface(destination));
+		} else {
+			interfaces.forEach((name, outIface) -> {
+				sendPacket(etherPacket, outIface);
+			});
+		}
 		
 		/********************************************************************/
+	}
+	
+	public void destroy() {
+		super.destroy();
+		MACTable.interrupt();
 	}
 }
