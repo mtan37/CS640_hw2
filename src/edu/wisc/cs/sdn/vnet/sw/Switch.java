@@ -99,9 +99,10 @@ public class Switch extends Device
 	public Switch(String host, DumpFile logfile)
 	{
 		super(host,logfile);
+		System.out.println("MAT Starting");
 		MACTable = new MacAddressTable();
 		MACTable.run();
-		System.out.println("MAT Started");
+		System.out.println("MAT Successfully Started");
 	}
 
 	/**
