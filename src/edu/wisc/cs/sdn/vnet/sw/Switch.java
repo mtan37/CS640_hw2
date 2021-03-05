@@ -135,7 +135,8 @@ public class Switch extends Device
 			// Drop packet with same source and dest
 			return;
 		}
-		if(!MACTable.exists(source)) {
+		
+		if(MACTable.exists(source)) {
 			MACTable.updateMACTime(source);
 		} else {
 			System.out.println("New source, adding to MAT");
