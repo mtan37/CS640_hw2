@@ -56,12 +56,14 @@ class MacAddressTable extends Thread {
 		MACLookupTable.put(mac, iface);
 		MACAddressTime addrTime = new MACAddressTime(mac);
 		MACTimes.add(addrTime);
+		System.out.println("MAC ADDR ADDED: " + mac.toString());
 	}
 	
 	public synchronized void cleanUp() {
 		long currTime = System.currentTimeMillis();
 		for(int i = 0; i<MACTimes.size(); i++) {
 			if (MACTimes.get(i).getTimeout() <= currTime) {
+				System.out.println("MAC ADDR REMOVED: " + MACTimes.get(i).getMAC().toString());
 				MACLookupTable.remove(MACTimes.get(i).getMAC());
 				MACTimes.remove(i);
 				i--;
