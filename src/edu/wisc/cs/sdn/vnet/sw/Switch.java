@@ -102,7 +102,7 @@ public class Switch extends Device
 		super(host,logfile);
 		System.out.println("MAT Starting");
 		MACTable = new MacAddressTable();
-		//MACTable.run();
+		MACTable.run();
 		System.out.println("MAT Successfully Started");
 	}
 
