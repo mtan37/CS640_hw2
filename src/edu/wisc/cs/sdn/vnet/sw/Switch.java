@@ -24,6 +24,7 @@ class MacAddressTable extends Thread {
 				e.printStackTrace();
 				break;
 			}
+			System.out.println("**MAT Running Cleanup**");
 			cleanUp();
 		}
 	}
@@ -100,6 +101,7 @@ public class Switch extends Device
 		super(host,logfile);
 		MACTable = new MacAddressTable();
 		MACTable.run();
+		System.out.println("MAT Started");
 	}
 
 	/**
@@ -113,20 +115,25 @@ public class Switch extends Device
 				etherPacket.toString().replace("\n", "\n\t"));
 		
 		/********************************************************************/
-		
+		System.out.println("Switch Start Packet");
 		MACAddress source = etherPacket.getSourceMAC();
 		if(!MACTable.exists(source)) {
+			System.out.println("New source, adding to MAT");
 			MACTable.addMAC(source, inIface);
 		}
 		
 		MACAddress destination = etherPacket.getDestinationMAC();
 		if(MACTable.exists(destination)){
+			System.out.println("Destination out interface found. Sending");
 			sendPacket(etherPacket, MACTable.getIface(destination));
 		} else {
+			System.out.println("No destination found. Broadcasting");
 			interfaces.forEach((name, outIface) -> {
 				sendPacket(etherPacket, outIface);
 			});
 		}
+		
+		System.out.println("----Packet Sent----");
 		
 		/********************************************************************/
 	}
