@@ -58,10 +58,10 @@ class MacAddressTable extends Thread {
 			return;
 		} else {
 			for(MACAddressTime time: MACTimes) {
-				if(time.getMAC() == mac) {
+				if(time.getMAC().equals(mac)) {
 					System.out.println("STARTING TIME: " + time.getTimeout());
 					time.updateTimeout();
-					System.out.println("TIME UPDATED: "+ time.getTimeout() +"----------------------------");
+					System.out.println("END TIME: " + time.getTimeout());
 				}
 			}
 		}
@@ -133,7 +133,7 @@ public class Switch extends Device
 		System.out.println("Switch Start Packet");
 		MACAddress source = etherPacket.getSourceMAC();
 		MACAddress destination = etherPacket.getDestinationMAC();
-		if(destination == source) {
+		if(destination.equals(source)) {
 			// Drop packet with same source and dest
 			return;
 		}
