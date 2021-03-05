@@ -6,6 +6,7 @@ import edu.wisc.cs.sdn.vnet.Iface;
 
 import net.floodlightcontroller.packet.Ethernet;
 import net.floodlightcontroller.packet.IPv4;
+import net.floodlightcontroller.packet.IPacket;
 
 /**
  * @author Aaron Gember-Jacobson and Anubhavnidhi Abhashkumar
@@ -88,12 +89,15 @@ public class Router extends Device
 		IPv4 payload = null;
 		
 		//Check if is IPv4 packet.If not, drop it
-		if (etherPacket.getEtherType() != Ethernet.TYPE_IPv4
-				&& etherPacket.getPayload() instanceof IPv4
-				&& payload != null){
+		IPacket data = (IPacket)etherPacket.getPayload();
+		if(data instanceof IPv4){
+			payload = (IPv4)data;
+		}
+		else{
+			System.out.println("*** -> Packet dropped - not a IPv4 packet: " + 
+				etherPacket.toString().replace("\n", "\n\t"));
 			return;
 		}
-		payload = (IPv4)etherPacket.getPayload();
 		
 		//verify the checksum. If not correct, drop it
 		//get the given checksum
@@ -105,13 +109,18 @@ public class Router extends Device
 		short newChecksum = payload.getChecksum();
 		
 		if(givenChecksum != newChecksum){
+			System.out.println("*** -> Packet dropped - checksum incorrect: " + 
+				etherPacket.toString().replace("\n", "\n\t"));
 			return;
 		}
 		
 		//decrease the TTL by 1. If result is 0, drop it
 		byte ttl = 0;
-		if((ttl = payload.getTtl()) <= (byte)1)
+		if((ttl = payload.getTtl()) <= (byte)1){
+			System.out.println("*** -> Packet dropped - TTL reached 0: " + 
+				etherPacket.toString().replace("\n", "\n\t"));
 			return;
+		}
 		ttl--;
 		payload.setTtl(ttl);
 		
@@ -120,21 +129,34 @@ public class Router extends Device
 		int destinationIp = payload.getDestinationAddress();	
 		for(Iface iface: this.interfaces.values()){
 			int currIp = iface.getIpAddress();
-			if(currIp == destinationIp)
+			if(currIp == destinationIp){
+				System.out.println("*** -> Packet dropped - destination is the current router: " + 
+					etherPacket.toString().replace("\n", "\n\t"));
 				return;
+			}
 		}
 		
 		//Packet forwarding
 		RouteEntry routeEntry = routeTable.lookup(destinationIp);	
-		if (routeEntry == null)
+		if (routeEntry == null){
+			System.out.println("*** -> Packet dropped - can't find route entry: " + 
+				etherPacket.toString().replace("\n", "\n\t"));
 			return;
+		}
 		
 		//find the forwarding interface
 		ArpEntry arpEntry = arpCache.lookup(destinationIp);
+		if(arpEntry == null){
+			System.out.println("*** -> Packet dropped - can't find arp entry for destination: " + 
+				etherPacket.toString().replace("\n", "\n\t"));
+			return;
+		}
 		String destinationMAC = arpEntry.getMac().toString();
+		
 		//set the MAC addresses for the frame
 		etherPacket.setSourceMACAddress(etherPacket.getDestinationMAC().toString());
 		etherPacket.setDestinationMACAddress(destinationMAC);	
+		
 		//re-serialize the frame
 		payload.resetChecksum();	
 		payload.serialize();
