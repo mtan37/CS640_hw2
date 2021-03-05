@@ -35,12 +35,6 @@ class MacAddressTable extends Thread {
 	}
 	
 	public synchronized Iface getIface(MACAddress mac) {
-		for(int i = 0; i<MACTimes.size(); i++) {
-			if(MACTimes.get(i).getMAC() == mac) {
-				MACTimes.get(i).updateTimeout();
-				break;
-			}
-		}
 		return MACLookupTable.get(mac);
 	}
 	
@@ -57,6 +51,18 @@ class MacAddressTable extends Thread {
 		MACAddressTime addrTime = new MACAddressTime(mac);
 		MACTimes.add(addrTime);
 		System.out.println("MAC ADDR ADDED: " + mac.toString());
+	}
+	
+	public synchronized void updateMACTime(MACAddress mac) {
+		if(MACLookupTable.get(mac) == null) {
+			return;
+		} else {
+			MACTimes.forEach(time -> {
+				if(time.getMAC() == mac) {
+					time.updateTimeout();
+				}
+			});
+		}
 	}
 	
 	public synchronized void cleanUp() {
@@ -124,12 +130,19 @@ public class Switch extends Device
 		/********************************************************************/
 		System.out.println("Switch Start Packet");
 		MACAddress source = etherPacket.getSourceMAC();
+		MACAddress destination = etherPacket.getDestinationMAC();
+		if(destination == source) {
+			// Drop packet with same source and dest
+			return;
+		}
 		if(!MACTable.exists(source)) {
+			MACTable.updateMACTime(source);
+		} else {
 			System.out.println("New source, adding to MAT");
 			MACTable.addMAC(source, inIface);
 		}
 		
-		MACAddress destination = etherPacket.getDestinationMAC();
+		
 		if(MACTable.exists(destination)){
 			System.out.println("Destination out interface found. Sending");
 			sendPacket(etherPacket, MACTable.getIface(destination));
