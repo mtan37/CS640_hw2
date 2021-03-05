@@ -14,6 +14,7 @@ class MacAddressTable extends Thread {
 	private ArrayList<MACAddressTime> MACTimes;
 	
 	public void run() {
+		System.out.println(isAlive());
 		MACLookupTable = new Hashtable<MACAddress, Iface>();
 		MACTimes = new ArrayList<MACAddressTime>();
 		while(true) {
