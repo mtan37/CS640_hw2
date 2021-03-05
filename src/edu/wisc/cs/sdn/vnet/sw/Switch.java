@@ -12,11 +12,15 @@ import java.util.Hashtable;
 class MacAddressTable extends Thread {
 	private Hashtable<MACAddress, Iface> MACLookupTable;
 	private ArrayList<MACAddressTime> MACTimes;
+	Thread cleanupThread;
 	
-	public void run() {
-		System.out.println(isAlive());
+	public MacAddressTable() {
 		MACLookupTable = new Hashtable<MACAddress, Iface>();
 		MACTimes = new ArrayList<MACAddressTime>();
+		cleanupThread = new Thread(this, "Cleanup");
+		cleanupThread.start();
+	}
+	public void run() {
 		while(true) {
 			try {
 				Thread.sleep(1000);
@@ -102,7 +106,6 @@ public class Switch extends Device
 		super(host,logfile);
 		System.out.println("MAT Starting");
 		MACTable = new MacAddressTable();
-		MACTable.run();
 		System.out.println("MAT Successfully Started");
 	}
 
