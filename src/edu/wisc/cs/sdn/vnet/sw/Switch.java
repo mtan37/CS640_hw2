@@ -57,11 +57,11 @@ class MacAddressTable extends Thread {
 		if(MACLookupTable.get(mac) == null) {
 			return;
 		} else {
-			MACTimes.forEach(time -> {
+			for(MACAddressTime time: MACTimes) {
 				if(time.getMAC() == mac) {
 					time.updateTimeout();
 				}
-			});
+			}
 		}
 	}
 	
