@@ -62,6 +62,7 @@ class MacAddressTable extends Thread {
 					time.updateTimeout();
 				}
 			}*/
+			System.out.println("TIME UPDATED _----------------------------");
 			for(int i = 0; i<MACTimes.size(); i++) {
 				MACAddressTime test = MACTimes.get(i);
 				MACTimes.remove(i);
