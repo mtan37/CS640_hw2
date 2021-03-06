@@ -9,6 +9,11 @@ import edu.wisc.cs.sdn.vnet.Iface;
 import java.util.ArrayList;
 import java.util.Hashtable;
 
+/**
+ * Creates and manages an current table of MAC addresses
+ * @author jacob
+ *
+ */
 class MacAddressTable extends Thread {
 	private Hashtable<MACAddress, Iface> MACLookupTable;
 	private ArrayList<MACAddressTime> MACTimes;
@@ -20,13 +25,17 @@ class MacAddressTable extends Thread {
 		cleanupThread = new Thread(this, "Cleanup");
 		cleanupThread.start();
 	}
+	
+	/**
+	 * Main method for the cleanup thread
+	 */
 	public void run() {
 		while(true) {
 			try {
+				// Waits 1 second
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
-				e.printStackTrace();
 				break;
 			}
 			//System.out.println("**MAT Running Cleanup**");
@@ -34,6 +43,11 @@ class MacAddressTable extends Thread {
 		}
 	}
 	
+	/**
+	 * Gets the Iface for a MAC address
+	 * @param mac 
+	 * @return Iface
+	 */
 	public synchronized Iface getIface(MACAddress mac) {
 		return MACLookupTable.get(mac);
 	}
@@ -46,6 +60,11 @@ class MacAddressTable extends Thread {
 		}
 	}
 	
+	/**
+	 * Adds a MAC address to the table
+	 * @param mac
+	 * @param iface
+	 */
 	public synchronized void addMAC(MACAddress mac, Iface iface) {
 		MACLookupTable.put(mac, iface);
 		MACAddressTime addrTime = new MACAddressTime(mac);
@@ -53,6 +72,11 @@ class MacAddressTable extends Thread {
 		//System.out.println("MAC ADDR ADDED: " + mac.toString());
 	}
 	
+	/**
+	 * Updates the removal time of a MAC address to 15 seconds
+	 * from when the command is run
+	 * @param mac
+	 */
 	public synchronized void updateMACTime(MACAddress mac) {
 		if(MACLookupTable.get(mac) == null) {
 			return;
@@ -65,6 +89,9 @@ class MacAddressTable extends Thread {
 		}
 	}
 	
+	/**
+	 * Removes all stale MAC addresses from the table
+	 */
 	public synchronized void cleanUp() {
 		long currTime = System.currentTimeMillis();
 		for(int i = 0; i<MACTimes.size(); i++) {
@@ -78,22 +105,37 @@ class MacAddressTable extends Thread {
 	}
 }
 
+/**
+ * This class stores a MAC address and its removal time
+ * @author jacob
+ *
+ */
 class MACAddressTime {
 	private long timeout;
 	private MACAddress mac;
+	
 	public MACAddressTime(MACAddress mac) {
 		this.mac = mac;
 		updateTimeout();
 	}
 	
+	/**
+	 * @return timeout
+	 */
 	public long getTimeout() {
 		return timeout;
 	}
 	
+	/**
+	 * @return MAC address
+	 */
 	public MACAddress getMAC() {
 		return mac;
 	}
 	
+	/**
+	 * Updates the removal time to 15 seconds from now
+	 */
 	public void updateTimeout() {
 		timeout = System.currentTimeMillis() + 15000;
 	}
@@ -129,29 +171,39 @@ public class Switch extends Device
 		
 		/********************************************************************/
 		//System.out.println("Switch Start Packet");
+		// Gets the source and destination mac addresses
 		MACAddress source = etherPacket.getSourceMAC();
 		MACAddress destination = etherPacket.getDestinationMAC();
+		
+		// Checks to make sure they are not null
 		if(source == null || destination == null) {
 			System.out.println("Error: Source/Destination MAC null");
 			return;
 		}
+		
 		if(destination.equals(source)) {
 			// Drop packet with same source and dest
 			return;
 		}
 		
+		
+		// Checks if the source is a known address
 		if(MACTable.exists(source)) {
+			// Updates the removal time
 			MACTable.updateMACTime(source);
 		} else {
+			// Adds the MAC address to the table
 			//System.out.println("New source, adding to MAT");
 			MACTable.addMAC(source, inIface);
 		}
 		
-		
+		// Checks if the destination is a known address
 		if(MACTable.exists(destination)){
+			// Sends it to the stored destination
 			//System.out.println("Destination out interface found. Sending");
 			sendPacket(etherPacket, MACTable.getIface(destination));
 		} else {
+			// Broadcasts it out to all interfaces except for the source
 			//System.out.println("No destination found. Broadcasting");
 			interfaces.forEach((name, outIface) -> {
 				if(!outIface.equals(inIface)) {
