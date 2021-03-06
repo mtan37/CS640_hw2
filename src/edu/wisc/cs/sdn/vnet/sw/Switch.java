@@ -153,7 +153,7 @@ public class Switch extends Device
 		} else {
 			System.out.println("No destination found. Broadcasting");
 			interfaces.forEach((name, outIface) -> {
-				if(outIface.equals(inIface)) {
+				if(!outIface.equals(inIface)) {
 					sendPacket(etherPacket, outIface);
 				}
 			});
