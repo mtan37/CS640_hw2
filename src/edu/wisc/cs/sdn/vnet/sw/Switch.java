@@ -54,6 +54,7 @@ class MacAddressTable extends Thread {
 	}
 	
 	public synchronized void updateMACTime(MACAddress mac) {
+		System.out.println("UPDATE TIME STARTED");
 		if(MACLookupTable.get(mac) == null) {
 			return;
 		} else {
