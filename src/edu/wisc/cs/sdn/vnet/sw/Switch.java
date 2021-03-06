@@ -136,6 +136,8 @@ public class Switch extends Device
 			return;
 		}
 		if(destination.equals(source)) {
+			System.out.println("*** -> Packet dropped - source and destination mac address are the same: " + 
+				etherPacket.toString().replace("\n", "\n\t"));
 			// Drop packet with same source and dest
 			return;
 		}
@@ -150,9 +152,13 @@ public class Switch extends Device
 		
 		if(MACTable.exists(destination)){
 			//System.out.println("Destination out interface found. Sending");
+			System.out.println("*** -> Packet sent: " + 
+				etherPacket.toString().replace("\n", "\n\t"));
 			sendPacket(etherPacket, MACTable.getIface(destination));
 		} else {
 			//System.out.println("No destination found. Broadcasting");
+			System.out.println("*** -> Packet broadcasted: " + 
+				etherPacket.toString().replace("\n", "\n\t"));
 			interfaces.forEach((name, outIface) -> {
 				if(!outIface.equals(inIface)) {
 					sendPacket(etherPacket, outIface);

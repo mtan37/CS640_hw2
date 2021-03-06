@@ -136,16 +136,20 @@ public class Router extends Device
 			}
 		}
 		
-		//Packet forwarding
-		RouteEntry routeEntry = routeTable.lookup(destinationIp);	
+		RouteEntry routeEntry = routeTable.lookup(destinationIp);			
 		if (routeEntry == null){
 			System.out.println("*** -> Packet dropped - can't find route entry: " + 
 				etherPacket.toString().replace("\n", "\n\t"));
 			return;
 		}
-		
-		//find the forwarding interface
-		ArpEntry arpEntry = arpCache.lookup(destinationIp);
+		//get the gateway address
+		int gatewayAddr = routeEntry.getGatewayAddress();
+	       	int nextHopIp = destinationIp;
+		if(gatewayAddr != 0){
+			nextHopIp = gatewayAddr;
+		}	
+				
+		ArpEntry arpEntry = arpCache.lookup(nextHopIp);
 		if(arpEntry == null){
 			System.out.println("*** -> Packet dropped - can't find arp entry for destination: " + 
 				etherPacket.toString().replace("\n", "\n\t"));
@@ -162,6 +166,8 @@ public class Router extends Device
 		payload.serialize();
 		etherPacket.setPayload(payload);
 		this.sendPacket(etherPacket, routeEntry.getInterface());
+		System.out.println("*** -> Packet sent: " + 
+			etherPacket.toString().replace("\n", "\n\t"));
 		/********************************************************************/
 	}
 }
