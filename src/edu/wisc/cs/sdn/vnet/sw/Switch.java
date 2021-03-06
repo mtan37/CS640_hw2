@@ -29,7 +29,7 @@ class MacAddressTable extends Thread {
 				e.printStackTrace();
 				break;
 			}
-			System.out.println("**MAT Running Cleanup**");
+			//System.out.println("**MAT Running Cleanup**");
 			cleanUp();
 		}
 	}
@@ -50,19 +50,16 @@ class MacAddressTable extends Thread {
 		MACLookupTable.put(mac, iface);
 		MACAddressTime addrTime = new MACAddressTime(mac);
 		MACTimes.add(addrTime);
-		System.out.println("MAC ADDR ADDED: " + mac.toString());
+		//System.out.println("MAC ADDR ADDED: " + mac.toString());
 	}
 	
 	public synchronized void updateMACTime(MACAddress mac) {
-		System.out.println("UPDATE TIME STARTED");
 		if(MACLookupTable.get(mac) == null) {
 			return;
 		} else {
 			for(MACAddressTime time: MACTimes) {
 				if(time.getMAC().equals(mac)) {
-					System.out.println("STARTING TIME: " + time.getTimeout());
 					time.updateTimeout();
-					System.out.println("END TIME: " + time.getTimeout());
 				}
 			}
 		}
@@ -72,7 +69,7 @@ class MacAddressTable extends Thread {
 		long currTime = System.currentTimeMillis();
 		for(int i = 0; i<MACTimes.size(); i++) {
 			if (MACTimes.get(i).getTimeout() <= currTime) {
-				System.out.println("MAC ADDR REMOVED: " + MACTimes.get(i).getMAC().toString());
+				//System.out.println("MAC ADDR REMOVED: " + MACTimes.get(i).getMAC().toString());
 				MACLookupTable.remove(MACTimes.get(i).getMAC());
 				MACTimes.remove(i);
 				i--;
@@ -115,9 +112,9 @@ public class Switch extends Device
 	public Switch(String host, DumpFile logfile)
 	{
 		super(host,logfile);
-		System.out.println("MAT Starting");
+		//System.out.println("MAT Starting");
 		MACTable = new MacAddressTable();
-		System.out.println("MAT Successfully Started");
+		//System.out.println("MAT Successfully Started");
 	}
 
 	/**
@@ -131,9 +128,13 @@ public class Switch extends Device
 				etherPacket.toString().replace("\n", "\n\t"));
 		
 		/********************************************************************/
-		System.out.println("Switch Start Packet");
+		//System.out.println("Switch Start Packet");
 		MACAddress source = etherPacket.getSourceMAC();
 		MACAddress destination = etherPacket.getDestinationMAC();
+		if(source == null || destination == null) {
+			System.out.println("Error: Source/Destination MAC null");
+			return;
+		}
 		if(destination.equals(source)) {
 			// Drop packet with same source and dest
 			return;
@@ -142,16 +143,16 @@ public class Switch extends Device
 		if(MACTable.exists(source)) {
 			MACTable.updateMACTime(source);
 		} else {
-			System.out.println("New source, adding to MAT");
+			//System.out.println("New source, adding to MAT");
 			MACTable.addMAC(source, inIface);
 		}
 		
 		
 		if(MACTable.exists(destination)){
-			System.out.println("Destination out interface found. Sending");
+			//System.out.println("Destination out interface found. Sending");
 			sendPacket(etherPacket, MACTable.getIface(destination));
 		} else {
-			System.out.println("No destination found. Broadcasting");
+			//System.out.println("No destination found. Broadcasting");
 			interfaces.forEach((name, outIface) -> {
 				if(!outIface.equals(inIface)) {
 					sendPacket(etherPacket, outIface);
@@ -159,7 +160,7 @@ public class Switch extends Device
 			});
 		}
 		
-		System.out.println("----Packet Sent----");
+		//System.out.println("----Packet Sent----");
 		
 		/********************************************************************/
 	}
